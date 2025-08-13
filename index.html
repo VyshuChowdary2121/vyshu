@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Automatic Mobile Power – Demo (Simulation)</title>
+  <style>
+    :root{
+      --bg: #0f1222;
+      --card: #151836;
+      --muted: #9aa3b2;
+      --accent: #6c8bff;
+      --good: #3ad29f;
+      --danger: #ff5d73;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font:16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background: radial-gradient(1200px 600px at 10% -10%, #1b1f48 0%, transparent 60%),
+                  radial-gradient(800px 500px at 110% 10%, #1c2b5a 0%, transparent 55%),
+                  var(--bg);
+      color:#e6e8ef; display:grid; place-items:center; padding:24px;
+    }
+    .app{width:min(100%, 980px);}    
+    .header{display:flex; gap:14px; align-items:center; justify-content:space-between; margin-bottom:18px}
+    .header h1{font-size:clamp(18px, 2.8vw, 26px); margin:0}
+    .pill{background:#1e224a; color:#d6dbff; padding:6px 12px; border-radius:999px; font-size:12px}
+
+    .grid{display:grid; grid-template-columns: 1.1fr .9fr; gap:18px}
+    @media (max-width: 860px){.grid{grid-template-columns:1fr;}}
+
+    .card{background:linear-gradient(180deg, #181c3f, #131736); border:1px solid #272b55; border-radius:18px; padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .card h2{margin:2px 0 14px; font-size:18px}
+    .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+    label{font-size:14px; color:#c7cbde}
+    input[type="time"]{appearance:none; background:#11142d; border:1px solid #2c3163; color:#f3f5ff; border-radius:12px; padding:10px 12px; font:inherit}
+    input[type="checkbox"]{transform:translateY(1px)}
+    button{cursor:pointer; border:0; border-radius:14px; padding:10px 14px; font:600 14px/1 system-ui; transition:.2s transform ease, .2s opacity ease;}
+    button:active{transform:translateY(1px)}
+    .btn{background:#232856; color:white; border:1px solid #2c3163}
+    .btn-primary{background:linear-gradient(180deg,#6d8aff,#5b79ff); border:1px solid #6a7fff}
+    .btn-ghost{background:transparent; color:#cfd6ff; border:1px dashed #3b4276}
+    .btn-danger{background:linear-gradient(180deg,#ff7185,#ff536e); border:1px solid #ff6a7d}
+
+    .muted{color:var(--muted); font-size:13px}
+    .spacer{height:12px}
+
+    /* Phone mock */
+    .phone-wrap{display:grid; place-items:center}
+    .phone{
+      width:min(92vw, 330px); height:640px; border:12px solid #0b0e25; border-radius:32px; position:relative; overflow:hidden; background:#000; box-shadow:0 20px 60px rgba(0,0,0,.5)
+    }
+    .camera{position:absolute; top:8px; left:50%; width:120px; height:20px; background:#0b0f2a; border-radius:0 0 12px 12px; transform:translateX(-50%)}
+    .screen{position:absolute; inset:0; display:grid; place-items:center; text-align:center; padding:20px}
+    .screen.on{background:radial-gradient(900px 600px at 50% -10%, #2bd0a4 0%, transparent 55%), #0a1026}
+    .screen.off{background:#04060f}
+
+    .state{font-size:42px; font-weight:800; letter-spacing:.08em}
+    .state.on{color:var(--good)}
+    .state.off{color:#444a6b}
+
+    .clock{margin-top:10px; font-size:14px; color:#aeb6d9}
+
+    .boot{position:absolute; bottom:14px; left:50%; transform:translateX(-50%); font:600 12px/1.2 system-ui; color:#8ea2ff; opacity:0;}
+    .boot.show{animation:blink 1.3s linear infinite}
+    @keyframes blink{0%,49%{opacity:.15} 50%,100%{opacity:.8}}
+
+    .divider{height:1px; background:linear-gradient(90deg, transparent, #2e3468, transparent); margin:12px 0}
+
+    .kpi{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+    .kpi .tile{background:#0f1330; border:1px solid #2b3270; border-radius:12px; padding:10px}
+    .kpi .tile b{display:block; font-size:12px; color:#b5bcdf}
+    .kpi .tile span{font-weight:700}
+
+    .footer{margin-top:10px}
+    .link{color:#9fb1ff}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>Automatic Mobile Power — <span class="muted">Web Demo (Simulation)</span></h1>
+      <span class="pill">No real power control (browser sandbox)</span>
+    </div>
+
+    <div class="grid">
+      <!-- Controls -->
+      <section class="card" aria-labelledby="controls">
+        <h2 id="controls">Schedule</h2>
+        <div class="row">
+          <label for="offTime">Power <b>OFF</b> at</label>
+          <input id="offTime" type="time" step="60" />
+          <label for="onTime">Power <b>ON</b> at</label>
+          <input id="onTime" type="time" step="60" />
+          <label class="row" style="gap:8px;margin-left:auto">
+            <input id="repeatDaily" type="checkbox" checked /> Repeat daily
+          </label>
+        </div>
+        <div class="spacer"></div>
+        <div class="row">
+          <button id="startBtn" class="btn btn-primary">Start schedule</button>
+          <button id="stopBtn" class="btn btn-danger">Stop schedule</button>
+          <button id="turnOn" class="btn">Turn ON now</button>
+          <button id="turnOff" class="btn btn-ghost">Turn OFF now</button>
+        </div>
+        <div class="divider"></div>
+        <div class="row" style="align-items:flex-start">
+          <div style="flex:1">
+            <div class="muted">Next event</div>
+            <div id="nextEvent" style="font-weight:700; font-size:15px; margin-top:2px">—</div>
+          </div>
+          <div style="flex:1">
+            <div class="muted">Status</div>
+            <div id="status" style="font-weight:700; font-size:15px; margin-top:2px">Idle</div>
+          </div>
+        </div>
+        <div class="spacer"></div>
+        <div class="kpi">
+          <div class="tile"><b>Repeats</b><span id="kRepeat">Daily</span></div>
+          <div class="tile"><b>OFF →</b><span id="kOff">—</span></div>
+          <div class="tile"><b>ON →</b><span id="kOn">—</span></div>
+        </div>
+        <p class="footer muted">Tip: allow notifications for reminders and haptic feedback (vibrate) when the simulated phone changes state.</p>
+      </section>
+
+      <!-- Phone mock -->
+      <section class="card phone-wrap" aria-labelledby="phone">
+        <h2 id="phone">Phone</h2>
+        <div class="phone" aria-live="polite" aria-atomic="true">
+          <div class="camera"></div>
+          <div id="screen" class="screen on">
+            <div>
+              <div id="stateLabel" class="state on">ON</div>
+              <div id="clock" class="clock">—:—</div>
+            </div>
+          </div>
+          <div id="boot" class="boot">booting…</div>
+        </div>
+      </section>
+    </div>
+
+  </div>
+
+  <script>
+    // Utilities
+    const $ = sel => document.querySelector(sel);
+    const pad = n => String(n).padStart(2,'0');
+    const fmt = d => `${d.toLocaleDateString()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    function timeStringToDate(timeStr){
+      // Returns a Date for the next occurrence of HH:MM (today or tomorrow)
+      const [h,m] = timeStr.split(":").map(Number);
+      const now = new Date();
+      const d = new Date(now);
+      d.setHours(h, m, 0, 0);
+      if(d <= now) d.setDate(d.getDate()+1);
+      return d;
+    }
+
+    function scheduleBetween(offStr, onStr){
+      // Calculates which event happens next and its delay.
+      const now = new Date();
+      const offToday = new Date(now); const onToday = new Date(now);
+      const [oh,om] = offStr.split(":").map(Number); offToday.setHours(oh, om, 0, 0);
+      const [ih,im] = onStr.split(":").map(Number); onToday.setHours(ih, im, 0, 0);
+
+      // Build next occurrences
+      let nextOff = new Date(offToday), nextOn = new Date(onToday);
+      if(nextOff <= now) nextOff.setDate(nextOff.getDate()+1);
+      if(nextOn <= now) nextOn.setDate(nextOn.getDate()+1);
+
+      // Next event is the sooner of the two
+      const nextEventTime = nextOff < nextOn ? nextOff : nextOn;
+      const nextEventType = nextOff < nextOn ? 'off' : 'on';
+      return { nextEventType, nextEventTime };
+    }
+
+    // Elements
+    const offTime = $('#offTime');
+    const onTime  = $('#onTime');
+    const repeatDaily = $('#repeatDaily');
+    const startBtn = $('#startBtn');
+    const stopBtn = $('#stopBtn');
+    const nextEvent = $('#nextEvent');
+    const status = $('#status');
+    const kRepeat = $('#kRepeat');
+    const kOff = $('#kOff');
+    const kOn = $('#kOn');
+
+    const screen = $('#screen');
+    const boot = $('#boot');
+    const stateLabel = $('#stateLabel');
+    const clock = $('#clock');
+
+    // State
+    let timers = [];
+    let poweredOn = true;
+
+    // Persist settings
+    const saved = JSON.parse(localStorage.getItem('autoPowerDemo')||'{}');
+    if(saved.offTime) offTime.value = saved.offTime;
+    if(saved.onTime) onTime.value = saved.onTime;
+    if(saved.repeatDaily !== undefined) repeatDaily.checked = saved.repeatDaily;
+
+    function save(){
+      localStorage.setItem('autoPowerDemo', JSON.stringify({
+        offTime: offTime.value,
+        onTime: onTime.value,
+        repeatDaily: repeatDaily.checked
+      }));
+    }
+
+    // Clock ticker
+    setInterval(()=>{
+      const d = new Date();
+      clock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }, 500);
+
+    // Notifications
+    async function notify(title, body){
+      try{
+        if(Notification && Notification.permission === 'granted'){
+          new Notification(title,{ body });
+        }
+      }catch(e){/* ignored */}
+      if('vibrate' in navigator) navigator.vibrate(60);
+    }
+    (async()=>{
+      try{ if('Notification' in window && Notification.permission === 'default'){ await Notification.requestPermission(); } }catch(e){}
+    })();
+
+    function setPhoneState(on){
+      poweredOn = !!on;
+      screen.classList.toggle('on', on);
+      screen.classList.toggle('off', !on);
+      stateLabel.textContent = on ? 'ON' : 'OFF';
+      stateLabel.className = 'state ' + (on ? 'on' : 'off');
+      boot.classList.toggle('show', on && boot.dataset.justBooted === '1');
+    }
+
+    function softBoot(){
+      boot.dataset.justBooted = '1';
+      setPhoneState(true);
+      setTimeout(()=>{ boot.dataset.justBooted = '0'; boot.classList.remove('show'); }, 3000);
+    }
+
+    function clearTimers(){
+      for(const t of timers) clearTimeout(t);
+      timers = [];
+    }
+
+    function updateKpi(){
+      kRepeat.textContent = repeatDaily.checked ? 'Daily' : 'One-time';
+      kOff.textContent = offTime.value || '—';
+      kOn.textContent  = onTime.value || '—';
+    }
+
+    function planNext(){
+      clearTimers();
+      updateKpi();
+
+      if(!offTime.value || !onTime.value){
+        nextEvent.textContent = 'Set both OFF and ON times to start.';
+        status.textContent = 'Idle';
+        return;
+      }
+
+      const { nextEventType, nextEventTime } = scheduleBetween(offTime.value, onTime.value);
+      const ms = nextEventTime - new Date();
+
+      nextEvent.textContent = `${nextEventType.toUpperCase()} at ${fmt(nextEventTime)}`;
+      status.textContent = 'Scheduled';
+
+      timers.push(setTimeout(()=>{
+        if(nextEventType === 'off'){
+          setPhoneState(false);
+          notify('Phone (simulated) powered OFF', `Until next ON at ${onTime.value}`);
+        } else {
+          softBoot();
+          notify('Phone (simulated) powered ON', `Next OFF at ${offTime.value}`);
+        }
+        if(repeatDaily.checked){
+          // After firing, plan the following event immediately
+          planNext();
+        } else {
+          nextEvent.textContent = '—';
+          status.textContent = 'Finished (one-time)';
+        }
+      }, ms));
+    }
+
+    // Button handlers
+    startBtn.addEventListener('click', ()=>{ save(); planNext(); });
+    stopBtn.addEventListener('click', ()=>{ clearTimers(); nextEvent.textContent='—'; status.textContent='Stopped'; });
+    $('#turnOn').addEventListener('click', ()=>{ softBoot(); status.textContent='Turned ON manually'; });
+    $('#turnOff').addEventListener('click', ()=>{ setPhoneState(false); status.textContent='Turned OFF manually'; notify('Phone (simulated) powered OFF','Manual action'); });
+
+    // Auto-save on changes
+    [offTime,onTime,repeatDaily].forEach(el=> el.addEventListener('change', ()=>{ save(); updateKpi(); }));
+
+    // Initialize
+    updateKpi(); setPhoneState(true);
+  </script>
+</body>
+</html>
